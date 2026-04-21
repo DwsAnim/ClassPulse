@@ -1,0 +1,50 @@
+/* ============================================================
+   ClassPulse — Theme CSS Variables
+   Include this on every page BEFORE your local <style> block
+   ============================================================ */
+
+/* ── DARK theme (default) ─────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+    --bg:         #0a0a14;
+    --bg2:        #0f0f1e;
+    --card:       rgba(255,255,255,0.05);
+    --card-b:     rgba(255,255,255,0.09);
+    --card-hover: rgba(255,255,255,0.08);
+    --text:       #f0f0f8;
+    --text2:      rgba(255,255,255,0.55);
+    --text3:      rgba(255,255,255,0.3);
+    --border:     rgba(255,255,255,0.1);
+    --input-bg:   rgba(255,255,255,0.06);
+    --input-b:    rgba(255,255,255,0.12);
+    --orb1-op:    0.25;
+    --orb2-op:    0.2;
+    --nav-bg:     rgba(10,10,20,0.92);
+    --nav-b:      rgba(255,255,255,0.08);
+    --shadow:     0 20px 60px rgba(0,0,0,0.4);
+}
+
+/* ── LIGHT theme ──────────────────────────────────────────── */
+[data-theme="light"] {
+    --bg:         #f4f2ff;
+    --bg2:        #ede9ff;
+    --card:       rgba(255,255,255,0.85);
+    --card-b:     rgba(108,92,231,0.12);
+    --card-hover: rgba(255,255,255,0.95);
+    --text:       #1a1a2e;
+    --text2:      rgba(26,26,46,0.6);
+    --text3:      rgba(26,26,46,0.35);
+    --border:     rgba(108,92,231,0.15);
+    --input-bg:   rgba(255,255,255,0.9);
+    --input-b:    rgba(108,92,231,0.2);
+    --orb1-op:    0.12;
+    --orb2-op:    0.1;
+    --nav-bg:     rgba(244,242,255,0.95);
+    --nav-b:      rgba(108,92,231,0.12);
+    --shadow:     0 20px 60px rgba(108,92,231,0.12);
+}
+
+/* ── Smooth transition on theme switch ─────────────────────── */
+*, *::before, *::after {
+    transition: background-color 0.25s ease, border-color 0.25s ease, color 0.15s ease;
+}

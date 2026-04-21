@@ -1,6 +1,8 @@
 # ClassPulse
 
 [Access the live app here!](https://classpulse.joerexsports.com/ClassPulse)
+The demo video is on this link below
+https://drive.google.com/file/d/1cVn3LK-cHem9j4Pw2YCExK4UQSF3_eZy/view?usp=drivesdk
 
 > **Live classroom engagement, AI-powered analytics, and zero student friction.**
 

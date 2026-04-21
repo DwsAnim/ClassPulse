@@ -170,56 +170,7 @@ For complex diagrams or unusual notation, the lecturer uploads a photo of the eq
 
 > **AI API Note:** This project uses the Google Gemini API from [aistudio.google.com](https://aistudio.google.com) — completely free with a generous limit, more than enough for development and live demo.
 
----
 
-## Build Timeline (5 Days)
-
-**Day 1 — Foundation**
-- GitHub repo setup, folder and branch structure
-- MySQL database — all tables (teachers, rooms, students, questions, answers)
-- Bootstrap base template and landing page
-- Teacher register and login with PHP auth
-- Student join page
-
-**Day 2 — Core Engine**
-- Session creator — question builder (MCQ, True/False, Short Answer)
-- Room code + QR code generation
-- PHP polling endpoints (get_question.php, submit_answer.php, get_results.php)
-- Student lobby and answer page with countdown timer
-- JS polling connected to backend for live question delivery
-
-**Day 3 — Live Dashboard + AI Features**
-- Teacher live session control panel with Chart.js real-time bar chart
-- Confusion meter — student tap and teacher heatmap
-- Google Gemini API integration — PDF/text upload to auto-generate questions
-- AI question review page
-- KaTeX math formula rendering
-
-**Day 4 — Analytics + Polish**
-- End-of-session leaderboard reveal animation
-- Full AI analytics report page
-- AI weak area detection logic
-- jsPDF session summary download
-- Full mobile responsiveness pass
-
-**Day 5 — Testing + Demo Prep**
-- End-to-end testing — full teacher and student simulation
-- Bug fixes
-- Deploy to Vercel + Railway
-- Backup demo video recording
-- Pitch slides and live demo rehearsal
-
----
-
-## Team
-
-| Person | Role | Responsibilities |
-|---|---|---|
-| Person 1 | Frontend Lead | Teacher dashboard, session creator UI, live control panel, Bootstrap layout |
-| Person 2 | Frontend Dev | Student join, lobby, answer page with KaTeX, score screen, leaderboard animation |
-| Person 3 | Backend Lead | PHP APIs — room creation, question launch, answer submission, polling, Gemini AI |
-| Person 4 | Backend Dev | MySQL schema, AI analytics engine, score calculation, confusion meter, PDF report |
-| Person 5 (Leader) | Full-stack + PM | QR code, Chart.js, KaTeX integration, deployment, demo coordination, pitch prep |
 
 ---
 

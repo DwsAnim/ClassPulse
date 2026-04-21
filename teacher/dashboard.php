@@ -554,113 +554,270 @@ async function renderAnalytics(){
     if(!sessionId){
         const ls=await get('sessions/list.php');
         const ended=(ls.sessions||[]).find(s=>!s.is_active);
-        if(!ended){VIEW.innerHTML=`<div class="card" style="text-align:center;padding:30px;color:var(--text3);">No completed sessions yet.</div>`;return;}
+        if(!ended){
+            VIEW.innerHTML=`<div class="card" style="text-align:center;padding:40px 20px;">
+                <div style="font-size:3rem;margin-bottom:12px;">📋</div>
+                <p style="color:var(--text2);font-weight:600;margin-bottom:6px;">No completed sessions yet</p>
+                <p style="color:var(--text3);font-size:.88rem;">End a live session to generate an analytics report.</p>
+                <button class="btn-primary" style="max-width:200px;margin:20px auto 0;" data-view="creator">Create Session</button>
+            </div>`;
+            return;
+        }
         sessionId=ended.id;
     }
     const d=await get(`analytics/report.php?session_id=${sessionId}`);
     if(!d.success){VIEW.innerHTML=`<div class="card"><p style="color:#ff7675;">${d.message}</p></div>`;return;}
 
     const {session,overview,students,questions,confusion,struggling,reteach_list}=d;
+
+    // Also load session list for switcher
+    const ls=await get('sessions/list.php');
+    const allSessions=(ls.sessions||[]).filter(s=>!s.is_active);
+
     const tierColor=t=>t==='excelling'?'var(--green)':t==='average'?'var(--g)':'var(--red)';
-    const tierIcon=t=>t==='excelling'?'🟢':t==='average'?'🟡':'🔴';
+    const tierIcon =t=>t==='excelling'?'🟢':t==='average'?'🟡':'🔴';
+    const tierLabel=t=>t==='excelling'?'Excelling':t==='average'?'Average':'Needs Help';
     const diffClass=t=>t==='easy'?'diff-easy':t==='medium'?'diff-medium':'diff-hard';
+    const diffIcon =t=>t==='easy'?'✅':t==='medium'?'⚠️':'🔴';
+
+    // Confusion totals
+    const cfTotal = (confusion.got_it||0)+(confusion.unsure||0)+(confusion.lost||0);
+    const cfPct   = v => cfTotal>0 ? Math.round(v/cfTotal*100) : 0;
+
+    // Class health score: weighted avg of score + confusion sentiment
+    const confusionScore = cfTotal>0 ? Math.round(((confusion.got_it*100)+(confusion.unsure*50)+(confusion.lost*0))/cfTotal) : null;
+
+    // Grade label
+    const gradeLabel = s => s>=85?'A':s>=70?'B':s>=55?'C':s>=40?'D':'F';
+    const gradeColor = s => s>=85?'var(--green)':s>=70?'#74b9ff':s>=55?'var(--g)':s>=40?'var(--warn)':'var(--red)';
 
     VIEW.innerHTML=`
+    <!-- Session selector (if multiple sessions) -->
+    ${allSessions.length>1?`
+    <div class="card" style="padding:14px 18px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span style="font-size:.8rem;color:var(--text3);white-space:nowrap;">Viewing report for:</span>
+            <select class="inp" id="sessionSwitcher" style="flex:1;min-width:180px;padding:8px 12px;font-size:.85rem;">
+                ${allSessions.map(s=>`<option value="${s.id}" ${s.id==sessionId?'selected':''}>${esc(s.title)} — ${fmtDate(s.created_at)}</option>`).join('')}
+            </select>
+        </div>
+    </div>`:''}
+
+    <!-- Header -->
     <div class="card">
-        <div class="card-title"><i class="fas fa-chart-bar" style="color:var(--p)"></i>Analytics Report</div>
-        <p style="font-size:.82rem;color:var(--text3);margin-bottom:16px;">
-            ${esc(session.title)} &nbsp;·&nbsp; ${fmtDate(session.created_at)}
-            &nbsp;·&nbsp; Room: <strong style="letter-spacing:2px;">${session.room_code}</strong>
-        </p>
-
-        <!-- Stat grid: accurate numbers -->
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
-            ${[
-                ['Students',    overview.total_students],
-                ['Questions',   overview.total_questions],
-                ['Avg Score',   overview.avg_score+'%'],
-                ['Top Score',   overview.top_score+'%'],
-                ['Lowest',      overview.bottom_score+'%'],
-                ['Completed',   overview.completed_students+'/'+overview.total_students],
-            ].map(([l,v])=>`<div class="analytics-stat"><div class="val">${v}</div><div class="lbl">${l}</div></div>`).join('')}
-        </div>
-
-        <!-- Score distribution chart -->
-        <div class="chart-wrap"><canvas id="distChart" height="130"></canvas></div>
-
-        <!-- Confusion summary -->
-        <div class="card-title"><i class="fas fa-fire" style="color:var(--warn)"></i>Confusion Summary</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
-            <div class="analytics-stat"><div class="val" style="color:var(--green);">${confusion.got_it}</div><div class="lbl">Got It</div></div>
-            <div class="analytics-stat"><div class="val" style="color:var(--g);">${confusion.unsure}</div><div class="lbl">Unsure</div></div>
-            <div class="analytics-stat"><div class="val" style="color:var(--red);">${confusion.lost}</div><div class="lbl">Lost</div></div>
-        </div>
-
-        <!-- Re-teach list -->
-        ${reteach_list.length?`
-        <div class="card-title"><i class="fas fa-rotate-left" style="color:var(--warn)"></i>Needs Re-teaching</div>
-        ${reteach_list.map(q=>`
-        <div class="q-analysis">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-                <span style="font-size:.88rem;font-weight:600;">${esc(q.question)}</span>
-                <span style="flex-shrink:0;background:rgba(214,48,49,.2);color:#ff7675;border-radius:30px;padding:2px 10px;font-size:.72rem;font-weight:700;">${q.correct_pct}% correct</span>
-            </div>
-        </div>`).join('')}`:''}
-
-        <!-- Students -->
-        <div class="card-title" style="margin-top:4px;"><i class="fas fa-users" style="color:var(--p)"></i>All Students (${students.length})</div>
-        ${students.map((s,i)=>`
-        <div class="student-card" style="border-left-color:${tierColor(s.tier)};">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
             <div>
-                <span style="font-weight:600;font-size:.88rem;">${tierIcon(s.tier)} ${esc(s.name)}</span><br>
-                <span style="font-size:.76rem;color:var(--text3);">${s.correct}/${s.total_q} correct &nbsp;·&nbsp; avg ${s.avg_time}s</span>
+                <div class="card-title" style="margin-bottom:4px;"><i class="fas fa-chart-bar" style="color:var(--p)"></i>${esc(session.title)}</div>
+                <p style="font-size:.8rem;color:var(--text3);">
+                    ${fmtDate(session.created_at)} &nbsp;·&nbsp;
+                    Room: <strong style="letter-spacing:2px;color:var(--text2);">${session.room_code}</strong>
+                    ${session.ended_at?` &nbsp;·&nbsp; Ended ${fmtDate(session.ended_at)}`:''}
+                </p>
             </div>
-            <div style="text-align:right;">
-                <div style="font-size:1.2rem;font-weight:800;color:${tierColor(s.tier)};">${s.pct}%</div>
-                <div style="font-size:.7rem;color:rgba(255,255,255,.35);">#${i+1} rank</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div style="text-align:center;background:var(--input-bg);border:1.5px solid var(--border);border-radius:14px;padding:10px 18px;">
+                    <div style="font-size:1.8rem;font-weight:900;color:${gradeColor(overview.avg_score)};">${gradeLabel(overview.avg_score)}</div>
+                    <div style="font-size:.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;">Class Grade</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6 key stats -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;">
+            <div class="analytics-stat">
+                <div class="val">${overview.total_students}</div>
+                <div class="lbl">Students</div>
+            </div>
+            <div class="analytics-stat">
+                <div class="val">${overview.total_questions}</div>
+                <div class="lbl">Questions</div>
+            </div>
+            <div class="analytics-stat">
+                <div class="val" style="color:${gradeColor(overview.avg_score)};">${overview.avg_score}%</div>
+                <div class="lbl">Avg Score</div>
+            </div>
+            <div class="analytics-stat">
+                <div class="val" style="color:var(--green);">${overview.top_score}%</div>
+                <div class="lbl">Top Score</div>
+            </div>
+            <div class="analytics-stat">
+                <div class="val" style="color:var(--red);">${overview.bottom_score}%</div>
+                <div class="lbl">Lowest</div>
+            </div>
+            <div class="analytics-stat">
+                <div class="val">${overview.completed_students}/${overview.total_students}</div>
+                <div class="lbl">Completed</div>
+            </div>
+        </div>
+
+        <!-- Performance tiers summary -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;">
+            ${['excelling','average','needs_attention'].map(t=>{
+                const cnt=students.filter(s=>s.tier===t).length;
+                const pct=overview.total_students>0?Math.round(cnt/overview.total_students*100):0;
+                return `<div style="background:var(--input-bg);border:1px solid var(--border);border-radius:12px;padding:10px;text-align:center;">
+                    <div style="font-size:1.3rem;font-weight:800;color:${tierColor(t)};">${cnt}</div>
+                    <div style="font-size:.7rem;color:var(--text3);margin-top:2px;">${tierLabel(t)}</div>
+                    <div style="font-size:.68rem;color:var(--text3);">${pct}% of class</div>
+                </div>`;
+            }).join('')}
+        </div>
+    </div>
+
+    <!-- Score distribution chart -->
+    <div class="card">
+        <div class="card-title"><i class="fas fa-bar-chart" style="color:var(--p)"></i>Score Distribution</div>
+        <div class="chart-wrap"><canvas id="distChart" height="120"></canvas></div>
+    </div>
+
+    <!-- Confusion summary — fixed and rich -->
+    <div class="card">
+        <div class="card-title"><i class="fas fa-fire" style="color:var(--warn)"></i>Confusion Meter
+            <span style="margin-left:auto;font-size:.75rem;color:var(--text3);font-weight:400;">${cfTotal} responses total</span>
+        </div>
+        ${cfTotal===0?`
+        <p style="color:var(--text3);font-size:.88rem;text-align:center;padding:12px;">
+            No confusion data yet — students tap the feeling buttons after each answer.
+        </p>`:`
+        <!-- Got it -->
+        <div style="margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                <span style="font-size:.85rem;font-weight:600;">👍 Got it</span>
+                <span style="font-size:.85rem;font-weight:700;color:var(--green);">${confusion.got_it} &nbsp;<span style="color:var(--text3);font-weight:400;">(${cfPct(confusion.got_it)}%)</span></span>
+            </div>
+            <div style="height:10px;background:var(--input-bg);border-radius:10px;overflow:hidden;">
+                <div style="height:10px;width:${cfPct(confusion.got_it)}%;background:var(--green);border-radius:10px;transition:width .5s;"></div>
+            </div>
+        </div>
+        <!-- Unsure -->
+        <div style="margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                <span style="font-size:.85rem;font-weight:600;">🤔 Unsure</span>
+                <span style="font-size:.85rem;font-weight:700;color:var(--g);">${confusion.unsure} &nbsp;<span style="color:var(--text3);font-weight:400;">(${cfPct(confusion.unsure)}%)</span></span>
+            </div>
+            <div style="height:10px;background:var(--input-bg);border-radius:10px;overflow:hidden;">
+                <div style="height:10px;width:${cfPct(confusion.unsure)}%;background:var(--g);border-radius:10px;transition:width .5s;"></div>
+            </div>
+        </div>
+        <!-- Lost -->
+        <div style="margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                <span style="font-size:.85rem;font-weight:600;">😕 Lost</span>
+                <span style="font-size:.85rem;font-weight:700;color:var(--red);">${confusion.lost} &nbsp;<span style="color:var(--text3);font-weight:400;">(${cfPct(confusion.lost)}%)</span></span>
+            </div>
+            <div style="height:10px;background:var(--input-bg);border-radius:10px;overflow:hidden;">
+                <div style="height:10px;width:${cfPct(confusion.lost)}%;background:var(--red);border-radius:10px;transition:width .5s;"></div>
+            </div>
+        </div>
+        <!-- Insight -->
+        <div style="background:var(--input-bg);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-top:4px;">
+            <span style="font-size:.82rem;color:var(--text2);">
+                ${confusion.lost>confusion.got_it
+                    ? '⚠️ <strong>High confusion detected.</strong> More than half the class felt lost — consider revising this topic.'
+                    : confusion.unsure>confusion.got_it
+                    ? '📌 <strong>Mixed understanding.</strong> Many students were unsure — a quick recap may help.'
+                    : '✅ <strong>Good comprehension.</strong> Most students felt confident after answering.'}
+            </span>
+        </div>`}
+    </div>
+
+    <!-- Re-teach priority -->
+    ${reteach_list.length?`
+    <div class="card">
+        <div class="card-title"><i class="fas fa-rotate-left" style="color:var(--warn)"></i>Re-teach Priority
+            <span style="margin-left:auto;font-size:.75rem;color:var(--text3);font-weight:400;">${reteach_list.length} topic${reteach_list.length>1?'s':''} flagged</span>
+        </div>
+        <p style="font-size:.82rem;color:var(--text3);margin-bottom:12px;">These questions had less than 40% correct — revisit before the next class.</p>
+        ${reteach_list.map((q,i)=>`
+        <div class="q-analysis" style="border-left:3px solid var(--red);">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                <span style="font-size:.88rem;font-weight:600;">#${i+1} ${esc(q.question)}</span>
+                <span style="flex-shrink:0;background:rgba(214,48,49,.15);color:#ff7675;border-radius:30px;padding:3px 10px;font-size:.72rem;font-weight:700;">
+                    ${q.correct_pct}% correct
+                </span>
             </div>
         </div>`).join('')}
+    </div>`:''}
 
-        <!-- Per-question -->
-        <details style="margin-top:8px;">
-            <summary>Question Breakdown (${questions.length})</summary>
-            <div style="margin-top:10px;">
-            ${questions.map((q,i)=>`
-            <div class="q-analysis">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
-                    <span style="font-size:.85rem;font-weight:600;">Q${i+1}. ${esc(q.question)}</span>
-                    <span class="diff-badge ${diffClass(q.difficulty)}">${q.difficulty}</span>
+    <!-- Per-question breakdown (full) -->
+    <div class="card">
+        <div class="card-title"><i class="fas fa-list-check" style="color:var(--p)"></i>Question Breakdown</div>
+        ${questions.map((q,i)=>{
+            const barW = v => q.total_answers>0?Math.round(v/q.total_answers*100):0;
+            return `
+            <div class="q-analysis" style="border-left:3px solid ${q.difficulty==='easy'?'var(--green)':q.difficulty==='medium'?'var(--g)':'var(--red)'};">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
+                    <span style="font-size:.88rem;font-weight:700;">Q${i+1}. ${esc(q.question)}</span>
+                    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                        <span class="diff-badge ${diffClass(q.difficulty)}">${diffIcon(q.difficulty)} ${q.difficulty}</span>
+                    </div>
                 </div>
-                <div style="font-size:.78rem;color:var(--text3);">
-                    ${q.correct_count}/${q.total_answers} correct (${q.correct_pct}%)
-                    &nbsp;·&nbsp; avg ${q.avg_time}s
-                    ${q.most_missed?`&nbsp;·&nbsp; most missed: <strong style="color:#ff7675;">Option ${q.most_missed}</strong>`:''}
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:8px;font-size:.78rem;">
+                    <span style="color:var(--text3);">✅ Correct: <strong style="color:var(--text);">${q.correct_count}/${q.total_answers}</strong> (${q.correct_pct}%)</span>
+                    <span style="color:var(--text3);">⏱ Avg time: <strong style="color:var(--text);">${q.avg_time}s</strong></span>
+                    <span style="color:var(--text3);">Type: <strong style="color:var(--text);">${q.type==='true_false'?'True/False':q.type==='math'?'Math':'MCQ'}</strong></span>
+                    ${q.most_missed?`<span style="color:var(--text3);">Most missed: <strong style="color:#ff7675;">Option ${q.most_missed}</strong></span>`:'<span></span>'}
                 </div>
-                <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-                    ${['A','B','C','D'].map(k=>`
-                    <span style="background:${k===q.correct?'rgba(0,184,148,.2)':'rgba(255,255,255,.06)'};border:1px solid ${k===q.correct?'rgba(0,184,148,.3)':'rgba(255,255,255,.1)'};border-radius:8px;padding:3px 10px;font-size:.74rem;color:${k===q.correct?'var(--green)':'rgba(255,255,255,.5)'};">
-                        ${k}: ${q.distribution[k]||0}
-                    </span>`).join('')}
+                <!-- Answer distribution mini bars -->
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                    ${['A','B','C','D'].filter(k=>q.distribution[k]!=null&&(q.type!=='true_false'||k==='A'||k==='B')).map(k=>`
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="width:20px;font-size:.75rem;font-weight:700;color:${k===q.correct?'var(--green)':'var(--text3)'};">${k}</span>
+                        <div style="flex:1;height:7px;background:var(--input-bg);border-radius:6px;overflow:hidden;">
+                            <div style="height:7px;width:${barW(q.distribution[k]||0)}%;background:${k===q.correct?'var(--green)':q.most_missed===k?'var(--red)':'rgba(108,92,231,.4)'};border-radius:6px;transition:width .4s;"></div>
+                        </div>
+                        <span style="width:28px;font-size:.73rem;color:var(--text3);text-align:right;">${q.distribution[k]||0}</span>
+                    </div>`).join('')}
                 </div>
-            </div>`).join('')}
+            </div>`;
+        }).join('')}
+    </div>
+
+    <!-- All students ranking -->
+    <div class="card">
+        <div class="card-title"><i class="fas fa-trophy" style="color:var(--g)"></i>Student Rankings</div>
+        ${students.length===0?`<p style="color:var(--text3);text-align:center;padding:16px;">No students data.</p>`:''}
+        ${students.map((s,i)=>`
+        <div class="student-card" style="border-left-color:${tierColor(s.tier)};">
+            <div style="display:flex;align-items:center;gap:10px;flex:1;">
+                <div style="width:30px;height:30px;border-radius:50%;background:${i===0?'rgba(253,203,110,.2)':i===1?'rgba(176,183,196,.15)':i===2?'rgba(205,159,110,.15)':'var(--input-bg)'};display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:800;color:${i===0?'var(--g)':i===1?'#b0b7c4':i===2?'#cd9f6e':'var(--text3)'};">
+                    ${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:.9rem;">${esc(s.name)}</div>
+                    <div style="font-size:.74rem;color:var(--text3);">${tierIcon(s.tier)} ${tierLabel(s.tier)} &nbsp;·&nbsp; ${s.correct}/${s.total_q} correct &nbsp;·&nbsp; avg ${s.avg_time}s</div>
+                </div>
             </div>
-        </details>
+            <div style="text-align:right;flex-shrink:0;">
+                <div style="font-size:1.3rem;font-weight:900;color:${gradeColor(s.pct)};">${s.pct}%</div>
+                <div style="font-size:.7rem;color:${gradeColor(s.pct)};font-weight:700;">${gradeLabel(s.pct)}</div>
+            </div>
+        </div>`).join('')}
     </div>`;
 
-    // Draw distribution chart
+    // Wire session switcher
     setTimeout(()=>{
+        const sw=document.getElementById('sessionSwitcher');
+        if(sw) sw.addEventListener('change',()=>{ window._analyticsId=parseInt(sw.value); renderAnalytics(); });
+
+        // Score distribution chart
         const ctx=document.getElementById('distChart')?.getContext('2d');
         if(!ctx)return;
         const bkts=overview.score_distribution;
+        const bgColors=Object.keys(bkts).map(k=>{
+            const mid=parseInt(k.split('-')[0]);
+            return mid<=40?'rgba(214,48,49,.7)':mid<=60?'rgba(225,112,85,.7)':mid<=70?'rgba(253,203,110,.7)':mid<=85?'rgba(116,185,255,.7)':'rgba(0,184,148,.7)';
+        });
         charts.dist=new Chart(ctx,{type:'bar',
             data:{labels:Object.keys(bkts),datasets:[{label:'Students',data:Object.values(bkts),
-                backgroundColor:'rgba(108,92,231,.7)',borderRadius:8,borderSkipped:false}]},
-            options:{plugins:{legend:{display:false}},scales:{
-                x:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'rgba(255,255,255,.5)'}},
-                y:{beginAtZero:true,ticks:{stepSize:1,color:'rgba(255,255,255,.5)'},grid:{color:'rgba(255,255,255,.05)'}}
-            }}
+                backgroundColor:bgColors,borderRadius:8,borderSkipped:false}]},
+            options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.parsed.y} student${ctx.parsed.y!==1?'s':''}`}}},
+                scales:{
+                    x:{grid:{color:'var(--chart-grid)'},ticks:{color:'var(--chart-tick)'}},
+                    y:{beginAtZero:true,ticks:{stepSize:1,color:'var(--chart-tick)'},grid:{color:'var(--chart-grid)'}}
+                }}
         });
-    },50);
+    },60);
 }
 
 // ── Helpers ────────────────────────────────────────────────────

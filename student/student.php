@@ -208,6 +208,12 @@
         VIEW.querySelectorAll('.feel-btn').forEach(b=>b.addEventListener('click',()=>{
             VIEW.querySelectorAll('.feel-btn').forEach(x=>x.classList.remove('active'));
             b.classList.add('active'); S.feeling=b.dataset.f;
+            // Send feeling immediately when tapped — confusion.php handles upsert
+            req('answers/confusion.php',{
+                question_id: S.questions[S.qIndex].id,
+                student_id:  S.student.id,
+                feeling:     S.feeling,
+            }).catch(()=>{});
         }));
         document.getElementById('submitBtn').addEventListener('click',submitAnswer);
         startTimer(parseInt(q.timer)||30);
@@ -225,7 +231,6 @@
                 question_id: S.questions[S.qIndex].id,
                 answer:      S.selectedOpt,
                 time_taken:  timeTaken,
-                feeling:     S.feeling||null,
                 student_id:  S.student.id,   // fallback if PHP session lost
             });
             VIEW.querySelectorAll('.option').forEach(b=>{b.disabled=true;if(b.dataset.opt===S.selectedOpt)b.classList.add(d.is_correct?'correct':'wrong');});

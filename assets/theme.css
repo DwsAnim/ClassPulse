@@ -1,6 +1,5 @@
 /* ============================================================
    ClassPulse — Theme CSS Variables
-   Include this on every page BEFORE your local <style> block
    ============================================================ */
 
 /* ── DARK theme (default) ─────────────────────────────────── */
@@ -19,32 +18,249 @@
     --input-b:    rgba(255,255,255,0.12);
     --orb1-op:    0.25;
     --orb2-op:    0.2;
-    --nav-bg:     rgba(10,10,20,0.92);
+    --nav-bg:     rgba(10,10,20,0.94);
     --nav-b:      rgba(255,255,255,0.08);
     --shadow:     0 20px 60px rgba(0,0,0,0.4);
+    --chart-grid: rgba(255,255,255,0.06);
+    --chart-tick: rgba(255,255,255,0.4);
 }
 
 /* ── LIGHT theme ──────────────────────────────────────────── */
 [data-theme="light"] {
-    --bg:         #f4f2ff;
-    --bg2:        #ede9ff;
-    --card:       rgba(255,255,255,0.85);
-    --card-b:     rgba(108,92,231,0.12);
-    --card-hover: rgba(255,255,255,0.95);
-    --text:       #1a1a2e;
-    --text2:      rgba(26,26,46,0.6);
-    --text3:      rgba(26,26,46,0.35);
-    --border:     rgba(108,92,231,0.15);
-    --input-bg:   rgba(255,255,255,0.9);
-    --input-b:    rgba(108,92,231,0.2);
-    --orb1-op:    0.12;
-    --orb2-op:    0.1;
-    --nav-bg:     rgba(244,242,255,0.95);
-    --nav-b:      rgba(108,92,231,0.12);
-    --shadow:     0 20px 60px rgba(108,92,231,0.12);
+    --bg:         #eeeaf8;
+    --bg2:        #e5e0f5;
+    --card:       #ffffff;
+    --card-b:     rgba(108,92,231,0.14);
+    --card-hover: #f8f6ff;
+    --text:       #12112a;
+    --text2:      #4a4770;
+    --text3:      #9490b8;
+    --border:     rgba(108,92,231,0.18);
+    --input-bg:   #f0eeff;
+    --input-b:    rgba(108,92,231,0.22);
+    --orb1-op:    0.09;
+    --orb2-op:    0.07;
+    --nav-bg:     rgba(238,234,248,0.97);
+    --nav-b:      rgba(108,92,231,0.14);
+    --shadow:     0 20px 60px rgba(108,92,231,0.1);
+    --chart-grid: rgba(108,92,231,0.08);
+    --chart-tick: #9490b8;
 }
 
 /* ── Smooth transition on theme switch ─────────────────────── */
 *, *::before, *::after {
-    transition: background-color 0.25s ease, border-color 0.25s ease, color 0.15s ease;
+    transition: background-color 0.22s ease, border-color 0.22s ease,
+                color 0.15s ease, box-shadow 0.22s ease;
+}
+
+/* ── Light mode overrides for elements that need explicit fixes ── */
+
+/* Inputs in light mode need visible borders and slightly tinted bg */
+[data-theme="light"] input,
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+    color: var(--text) !important;
+    background: var(--input-bg) !important;
+    border-color: var(--input-b) !important;
+}
+
+[data-theme="light"] input::placeholder {
+    color: var(--text3) !important;
+}
+
+/* Stat values — use purple gradient in light mode so they pop */
+[data-theme="light"] .stat-val {
+    background: linear-gradient(135deg, #6C5CE7, #4a3aa8) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    color: transparent !important;
+}
+
+/* Session/question rows in light — give a subtle purple tint border */
+[data-theme="light"] .session-row {
+    background: #f7f5ff !important;
+    border-color: rgba(108,92,231,0.15) !important;
+}
+[data-theme="light"] .session-row.active-row {
+    background: #ede8ff !important;
+    border-color: rgba(108,92,231,0.4) !important;
+}
+
+/* Q-block in creator light mode */
+[data-theme="light"] .q-block {
+    background: #f4f1ff !important;
+    border-color: rgba(108,92,231,0.18) !important;
+}
+
+/* Hint box */
+[data-theme="light"] .hint-box {
+    background: rgba(108,92,231,0.08) !important;
+    border-color: rgba(108,92,231,0.2) !important;
+    color: var(--text2) !important;
+}
+
+/* Analytics stat boxes */
+[data-theme="light"] .analytics-stat {
+    background: #f4f1ff !important;
+    border-color: rgba(108,92,231,0.15) !important;
+}
+[data-theme="light"] .analytics-stat .val {
+    color: #6C5CE7 !important;
+}
+
+/* Q-analysis boxes */
+[data-theme="light"] .q-analysis {
+    background: #f7f5ff !important;
+    border-color: rgba(108,92,231,0.15) !important;
+}
+
+/* Student cards */
+[data-theme="light"] .student-card {
+    background: #f4f1ff !important;
+}
+
+/* Chart wrap */
+[data-theme="light"] .chart-wrap {
+    background: #f7f5ff !important;
+}
+
+/* Current question box in Live */
+[data-theme="light"] .current-q-box {
+    background: rgba(108,92,231,0.08) !important;
+    border-color: rgba(108,92,231,0.2) !important;
+}
+
+/* Confusion meter tracks */
+[data-theme="light"] .cf-track {
+    background: rgba(108,92,231,0.1) !important;
+}
+
+/* Progress track */
+[data-theme="light"] .progress-track,
+[data-theme="light"] .prog-track {
+    background: rgba(108,92,231,0.1) !important;
+}
+
+/* Nav items */
+[data-theme="light"] .nav-item {
+    color: var(--text3) !important;
+}
+[data-theme="light"] .nav-item.active {
+    color: #6C5CE7 !important;
+}
+
+/* Buttons ghost in light */
+[data-theme="light"] .btn-ghost {
+    background: #f0eeff !important;
+    border-color: rgba(108,92,231,0.2) !important;
+    color: var(--text2) !important;
+}
+[data-theme="light"] .btn-ghost:hover {
+    background: #e8e2ff !important;
+    color: var(--text) !important;
+}
+
+/* Danger button */
+[data-theme="light"] .btn-danger {
+    background: rgba(214,48,49,0.08) !important;
+    border-color: rgba(214,48,49,0.25) !important;
+}
+
+/* Badge variants */
+[data-theme="light"] .badge-live {
+    background: rgba(0,184,148,0.12) !important;
+    border-color: rgba(0,184,148,0.25) !important;
+}
+[data-theme="light"] .badge-ended {
+    background: rgba(108,92,231,0.08) !important;
+    border-color: rgba(108,92,231,0.15) !important;
+    color: var(--text3) !important;
+}
+
+/* Delete button */
+[data-theme="light"] .del-btn {
+    background: rgba(214,48,49,0.08) !important;
+    border-color: rgba(214,48,49,0.18) !important;
+}
+
+/* Live banner in light */
+[data-theme="light"] .live-banner {
+    background: linear-gradient(135deg,rgba(108,92,231,0.1),rgba(253,203,110,0.06)) !important;
+    border-color: rgba(108,92,231,0.25) !important;
+}
+
+/* Top bar pills in light */
+[data-theme="light"] .sync-pill,
+[data-theme="light"] .teacher-pill {
+    background: rgba(108,92,231,0.07) !important;
+    border-color: rgba(108,92,231,0.15) !important;
+}
+
+/* Icon buttons in light */
+[data-theme="light"] .icon-btn {
+    background: rgba(108,92,231,0.07) !important;
+    border-color: rgba(108,92,231,0.15) !important;
+    color: var(--text2) !important;
+}
+[data-theme="light"] .icon-btn:hover {
+    background: rgba(108,92,231,0.13) !important;
+    color: var(--text) !important;
+}
+
+/* Student option buttons */
+[data-theme="light"] .option {
+    background: #f4f1ff !important;
+    border-color: rgba(108,92,231,0.18) !important;
+    color: var(--text) !important;
+}
+[data-theme="light"] .option:hover:not(:disabled) {
+    background: #ede8ff !important;
+    border-color: #6C5CE7 !important;
+}
+[data-theme="light"] .option.selected {
+    background: #e8e2ff !important;
+    border-color: #6C5CE7 !important;
+}
+[data-theme="light"] .opt-key {
+    background: rgba(108,92,231,0.12) !important;
+    color: #6C5CE7 !important;
+}
+
+/* Feel buttons (confusion) */
+[data-theme="light"] .feel-btn {
+    background: #f0eeff !important;
+    border-color: rgba(108,92,231,0.18) !important;
+    color: var(--text2) !important;
+}
+
+/* Leader rows on end screen */
+[data-theme="light"] .leader-row {
+    background: #f4f1ff !important;
+}
+
+/* Summary pill on student lobby */
+[data-theme="light"] .sync-pill {
+    background: rgba(108,92,231,0.07) !important;
+}
+
+/* Card title icons inherit correctly */
+[data-theme="light"] .card-title {
+    color: var(--text) !important;
+}
+
+/* Autopilot badge */
+[data-theme="light"] .autopilot-badge {
+    background: rgba(0,184,148,0.1) !important;
+    border-color: rgba(0,184,148,0.2) !important;
+}
+
+/* Student list rows */
+[data-theme="light"] .student-row {
+    border-color: rgba(108,92,231,0.08) !important;
+    color: var(--text) !important;
+}
+
+/* Details/summary */
+[data-theme="light"] details summary {
+    color: var(--text2) !important;
 }

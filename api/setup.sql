@@ -1,48 +1,27 @@
--- =============================================================
---  ClassPulse — Database Setup
---  Run this once in phpMyAdmin or MySQL CLI:
---    mysql -u root -p < setup.sql
--- =============================================================
-
-CREATE DATABASE IF NOT EXISTS classpulse
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_unicode_ci;
-
-USE classpulse;
-
--- ---------------------------------------------------------------
--- Teachers table
--- ---------------------------------------------------------------
+-- ── Teachers ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS teachers (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     full_name   VARCHAR(120)  NOT NULL,
     course      VARCHAR(120)  NOT NULL DEFAULT 'General',
-    password    VARCHAR(255)  NOT NULL,          -- bcrypt hash
-    created_at  TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+    password    VARCHAR(255)  NOT NULL,
+    created_at  TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY idx_teacher_name (full_name)
 );
 
--- Unique index so two teachers can't share the same name
--- (matches the original frontend logic — swap for email later if needed)
-CREATE UNIQUE INDEX IF NOT EXISTS idx_teacher_name ON teachers(full_name);
-
-
--- ---------------------------------------------------------------
--- Sessions table  (we'll populate this in the next step)
--- ---------------------------------------------------------------
+-- ── Sessions ──────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS sessions (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     teacher_id  INT           NOT NULL,
     title       VARCHAR(200)  NOT NULL,
-    room_code   VARCHAR(10)   NOT NULL UNIQUE,
+    room_code   VARCHAR(10)   NOT NULL,
     is_active   TINYINT(1)    DEFAULT 1,
     created_at  TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
     ended_at    TIMESTAMP     NULL,
+    UNIQUE KEY idx_room_code (room_code),
     FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE CASCADE
 );
 
--- ---------------------------------------------------------------
--- Students table  (one row per student per session)
--- ---------------------------------------------------------------
+-- ── Students ──────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS students (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     session_id  INT           NOT NULL,
@@ -51,9 +30,7 @@ CREATE TABLE IF NOT EXISTS students (
     FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
 );
 
--- ---------------------------------------------------------------
--- Questions table
--- ---------------------------------------------------------------
+-- ── Questions ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS questions (
     id           INT AUTO_INCREMENT PRIMARY KEY,
     session_id   INT          NOT NULL,
@@ -62,7 +39,7 @@ CREATE TABLE IF NOT EXISTS questions (
     option_b     TEXT,
     option_c     TEXT,
     option_d     TEXT,
-    correct      CHAR(1),             -- 'A', 'B', 'C', or 'D'
+    correct      CHAR(1),
     type         ENUM('mcq','true_false','short','math') DEFAULT 'mcq',
     timer        INT          DEFAULT 30,
     sort_order   INT          DEFAULT 0,
@@ -71,24 +48,20 @@ CREATE TABLE IF NOT EXISTS questions (
     FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
 );
 
--- ---------------------------------------------------------------
--- Answers table
--- ---------------------------------------------------------------
+-- ── Answers ───────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS answers (
     id           INT AUTO_INCREMENT PRIMARY KEY,
     question_id  INT          NOT NULL,
     student_id   INT          NOT NULL,
     answer       VARCHAR(10),
     is_correct   TINYINT(1)   DEFAULT 0,
-    time_taken   INT          DEFAULT 0,   -- seconds
+    time_taken   INT          DEFAULT 0,
     submitted_at TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
     FOREIGN KEY (student_id)  REFERENCES students(id)  ON DELETE CASCADE
 );
 
--- ---------------------------------------------------------------
--- Confusion meter responses
--- ---------------------------------------------------------------
+-- ── Confusion meter ───────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS confusion (
     id           INT AUTO_INCREMENT PRIMARY KEY,
     question_id  INT          NOT NULL,

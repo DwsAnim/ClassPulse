@@ -221,7 +221,13 @@
         const timeTaken=S.timerMax-Math.max(0,S.timerSec);
         stopTimer(); S.answered=true;
         try{
-            const d=await req('answers/submit.php',{question_id:S.questions[S.qIndex].id,answer:S.selectedOpt,time_taken:timeTaken,feeling:S.feeling||null});
+            const d=await req('answers/submit.php',{
+                question_id: S.questions[S.qIndex].id,
+                answer:      S.selectedOpt,
+                time_taken:  timeTaken,
+                feeling:     S.feeling||null,
+                student_id:  S.student.id,   // fallback if PHP session lost
+            });
             VIEW.querySelectorAll('.option').forEach(b=>{b.disabled=true;if(b.dataset.opt===S.selectedOpt)b.classList.add(d.is_correct?'correct':'wrong');});
             const fb=document.getElementById('fb');
             fb.innerHTML=d.is_correct?'<span style="color:#00b894;font-size:1.05rem;">✅ Correct!</span>':'<span style="color:#ff7675;font-size:1.05rem;">❌ Wrong answer</span>';

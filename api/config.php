@@ -39,9 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // ── 4. DB credentials ──────────────────────────────────────────
 define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');        // XAMPP default: empty
-define('DB_NAME', 'classpulse');
+define('DB_USER', 'joerexs1_classpulse');
+define('DB_PASS', 'kinagnim2.0');        // XAMPP default: empty
+define('DB_NAME', 'joerexs1_classpulse');
 
 // ── 5. DB connection ───────────────────────────────────────────
 function getDB() {

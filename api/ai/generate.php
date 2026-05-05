@@ -8,7 +8,6 @@ if (empty($_SESSION['teacher_id'])) sendError('Not authenticated.', 401);
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendError('Method not allowed.', 405);
 
 // ── Gemini API Key ────────────────────────────────────────────
-define('GEMINI_API_KEY', 'AIzaSyApX2ttICslCsacDucjG_0Jxu3cLIi8jVI');
 define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' . GEMINI_API_KEY);
 
 // ── Prompt ────────────────────────────────────────────────────

@@ -122,6 +122,44 @@
         details summary::before{content:'▶ ';font-size:.7rem;color:var(--p);}
         details[open] summary::before{content:'▼ ';}
 
+        /* ── AI Generate feature ──────────────────────────────── */
+        .ai-panel{background:linear-gradient(135deg,rgba(108,92,231,.12),rgba(0,184,148,.08));border:1.5px solid rgba(108,92,231,.3);border-radius:16px;padding:18px;margin-bottom:16px;}
+        .ai-panel-title{font-size:.82rem;font-weight:700;color:var(--p);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;display:flex;align-items:center;gap:7px;}
+        .ai-upload-zone{border:2px dashed rgba(108,92,231,.4);border-radius:14px;padding:24px 16px;text-align:center;cursor:pointer;transition:all .25s;background:rgba(108,92,231,.05);position:relative;}
+        .ai-upload-zone:hover,.ai-upload-zone.drag{border-color:var(--p);background:rgba(108,92,231,.12);}
+        .ai-upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+        .ai-upload-icon{font-size:2rem;margin-bottom:8px;color:rgba(108,92,231,.6);}
+        .ai-upload-hint{font-size:.78rem;color:rgba(255,255,255,.4);margin-top:4px;}
+        .ai-preview-name{font-size:.82rem;color:var(--green);font-weight:600;margin-top:8px;display:none;}
+        .ai-divider{display:flex;align-items:center;gap:10px;margin:12px 0;color:rgba(255,255,255,.25);font-size:.75rem;}
+        .ai-divider::before,.ai-divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.1);}
+        .btn-ai{background:linear-gradient(135deg,#6C5CE7,#00b894);border:none;color:#fff;font-family:inherit;font-weight:700;padding:12px 18px;border-radius:12px;cursor:pointer;font-size:.88rem;width:100%;transition:opacity .15s,transform .15s;display:flex;align-items:center;justify-content:center;gap:8px;}
+        .btn-ai:hover:not(:disabled){opacity:.88;transform:translateY(-1px);}
+        .btn-ai:disabled{opacity:.4;cursor:not-allowed;}
+        /* Review modal */
+.ai-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .2s ease;}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        .ai-modal{background:var(--card);border:1.5px solid var(--card-b);border-radius:24px 24px 0 0;width:100%;max-width:860px;max-height:90vh;overflow-y:auto;padding:24px 20px 100px;animation:slideUp .3s ease;}
+        @keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+        .ai-modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+        .ai-modal-title{font-size:1.05rem;font-weight:800;}
+        .ai-close-btn{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.6);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+        .ai-q-card{background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.09);border-radius:14px;padding:16px;margin-bottom:12px;transition:border-color .2s;}
+        .ai-q-card:hover{border-color:rgba(108,92,231,.35);}
+        .ai-q-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+        .ai-q-badge{font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:30px;background:rgba(108,92,231,.2);color:#a78bfa;}
+        .ai-q-badge.tf{background:rgba(0,184,148,.15);color:var(--green);}
+        .ai-remove-btn{width:28px;height:28px;border-radius:8px;background:rgba(214,48,49,.12);border:1px solid rgba(214,48,49,.2);color:#ff7675;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.75rem;flex-shrink:0;}
+        .ai-q-text{font-size:.9rem;font-weight:600;margin-bottom:10px;line-height:1.4;}
+        .ai-q-options{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;}
+        .ai-opt{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:7px 10px;font-size:.78rem;color:var(--text2);}
+        .ai-opt.correct{background:rgba(0,184,148,.12);border-color:rgba(0,184,148,.3);color:var(--green);font-weight:600;}
+        .ai-opt-label{font-weight:700;margin-right:5px;color:rgba(255,255,255,.4);}
+        .ai-opt.correct .ai-opt-label{color:var(--green);}
+        .ai-timer-row{font-size:.75rem;color:rgba(255,255,255,.35);}
+        .ai-modal-footer{position:sticky;bottom:0;background:var(--card);padding:14px 0 0;margin-top:4px;border-top:1px solid rgba(255,255,255,.08);}
+        .ai-count-badge{background:rgba(108,92,231,.2);color:#a78bfa;border-radius:30px;padding:2px 10px;font-size:.78rem;font-weight:700;margin-left:8px;}
+
         /* Bottom nav */
         .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--nav-bg);backdrop-filter:blur(20px);border-top:1px solid var(--nav-b);display:flex;justify-content:space-around;padding:10px 0 14px;z-index:100;}
         .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:4px 20px;border-radius:12px;transition:all .2s;border:none;background:transparent;color:var(--text3);font-family:inherit;}
@@ -295,15 +333,116 @@ function renderCreator(){
     <div class="card">
         <div class="card-title"><i class="fas fa-circle-plus" style="color:var(--p)"></i>New Session</div>
         <div class="field"><label>Session Title</label><input id="titleInp" class="inp" placeholder="e.g. Biology 201 — Cell Division"></div>
+
+        <div class="ai-panel">
+            <div class="ai-panel-title"><i class="fas fa-wand-magic-sparkles"></i>Generate Questions with AI</div>
+            <div class="ai-upload-zone" id="aiUploadZone">
+                <input type="file" id="aiFileInput" accept="image/*,.pdf" capture="">
+                <div class="ai-upload-icon">&#x1F4F8;</div>
+                <div style="font-size:.88rem;font-weight:600;color:var(--text2);">Upload or snap a photo of your notes</div>
+                <div class="ai-upload-hint">JPG &middot; PNG &middot; WEBP &middot; PDF &nbsp;&middot;&nbsp; max 10 MB</div>
+                <div class="ai-preview-name" id="aiFileName"></div>
+            </div>
+            <div id="aiErr" class="err-msg" style="margin-top:8px;"></div>
+            <button class="btn-ai" id="aiGenerateBtn" disabled style="margin-top:12px;">
+                <i class="fas fa-wand-magic-sparkles"></i> Generate Questions
+            </button>
+        </div>
+
         <div class="card-title" style="margin-bottom:10px;"><i class="fas fa-list-check" style="color:var(--g)"></i>Questions</div>
         <div id="qContainer"></div>
-        <button class="btn-ghost" id="addQBtn" style="width:100%;margin-bottom:14px;"><i class="fas fa-plus me-2"></i>Add Question</button>
+        <button class="btn-ghost" id="addQBtn" style="width:100%;margin-bottom:14px;"><i class="fas fa-plus me-2"></i>Add Question Manually</button>
         <div id="createErr" class="err-msg"></div>
-        <button class="btn-primary" id="launchBtn"><i class="fas fa-rocket me-2"></i>Save & Launch Session</button>
+        <button class="btn-primary" id="launchBtn"><i class="fas fa-rocket me-2"></i>Save &amp; Launch Session</button>
     </div>`;
     document.getElementById('addQBtn').addEventListener('click', addQ);
     document.getElementById('launchBtn').addEventListener('click', doLaunch);
+    initAIPanel();
     addQ();
+}
+
+function initAIPanel(){
+    const zone=document.getElementById('aiUploadZone');
+    const fileInput=document.getElementById('aiFileInput');
+    const genBtn=document.getElementById('aiGenerateBtn');
+    const fileLabel=document.getElementById('aiFileName');
+    const errEl=document.getElementById('aiErr');
+    let selectedFile=null;
+
+    zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag');});
+    zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));
+    zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)setFile(f);});
+    fileInput.addEventListener('change',()=>{if(fileInput.files[0])setFile(fileInput.files[0]);});
+
+    function setFile(f){selectedFile=f;fileLabel.textContent='📎 '+f.name;fileLabel.style.display='block';genBtn.disabled=false;errEl.textContent='';}
+
+    genBtn.addEventListener('click',async()=>{
+        if(!selectedFile){errEl.textContent='Please select a file first.';return;}
+        errEl.textContent='';genBtn.disabled=true;
+        genBtn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Analysing notes…';
+        try{
+            const fd=new FormData();fd.append('file',selectedFile);
+            const resp=await fetch(`${API}/ai/generate.php`,{method:'POST',credentials:'include',body:fd});
+            const data=await resp.json();
+            if(!data.success){errEl.textContent=data.message||'AI generation failed.';return;}
+            openReviewModal(data.questions);
+        }catch(e){errEl.textContent='Network error — is the server running?';}
+        finally{genBtn.disabled=false;genBtn.innerHTML='<i class="fas fa-wand-magic-sparkles"></i> Generate Questions';}
+    });
+}
+
+function openReviewModal(questions){
+    let reviewed=questions.map((q,i)=>({...q,_id:i}));
+    function render(){
+        const old=document.getElementById('aiModalBackdrop');if(old)old.remove();
+        const bd=document.createElement('div');bd.className='ai-modal-backdrop';bd.id='aiModalBackdrop';
+        bd.innerHTML=`
+        <div class="ai-modal">
+            <div class="ai-modal-header">
+                <div class="ai-modal-title"><i class="fas fa-wand-magic-sparkles" style="color:var(--p);margin-right:7px;"></i>Review AI Questions <span class="ai-count-badge">${reviewed.length}</span></div>
+                <button class="ai-close-btn" id="aiModalClose"><i class="fas fa-times"></i></button>
+            </div>
+            <p style="font-size:.8rem;color:rgba(255,255,255,.4);margin-bottom:16px;">Review, edit, or remove questions before adding them to your session.</p>
+            <div id="aiQList">${reviewed.map(q=>`
+            <div class="ai-q-card">
+                <div class="ai-q-card-header">
+                    <span class="ai-q-badge ${q.type==='true_false'?'tf':''}">${q.type==='true_false'?'True / False':'MCQ'}</span>
+                    <button class="ai-remove-btn" onclick="aiRemoveQ(${q._id})"><i class="fas fa-trash"></i></button>
+                </div>
+                <div class="ai-q-text">${esc(q.question)}</div>
+                <div class="ai-q-options">
+                    ${['a','b','c','d'].filter(l=>q['option_'+l]).map(l=>`
+                    <div class="ai-opt${q.correct===l.toUpperCase()?' correct':''}">
+                        <span class="ai-opt-label">${l.toUpperCase()}.</span>${esc(q['option_'+l])}
+                    </div>`).join('')}
+                </div>
+                <div class="ai-timer-row"><i class="fas fa-clock" style="margin-right:4px;"></i>${q.timer}s timer</div>
+            </div>`).join('')}</div>
+            <div class="ai-modal-footer">
+                <div style="display:flex;gap:10px;">
+                    <button class="btn-ghost" id="aiCancelBtn" style="flex:1;">Cancel</button>
+                    <button class="btn-ai" id="aiApproveBtn" style="flex:2;"><i class="fas fa-check-circle"></i> Add ${reviewed.length} Question${reviewed.length!==1?'s':''} to Session</button>
+                </div>
+            </div>
+        </div>`;
+        document.body.appendChild(bd);
+        document.getElementById('aiModalClose').addEventListener('click',()=>bd.remove());
+        document.getElementById('aiCancelBtn').addEventListener('click',()=>bd.remove());
+        document.getElementById('aiApproveBtn').addEventListener('click',()=>{
+            if(!reviewed.length)return;
+            draftQuestions=[];
+            document.getElementById('qContainer').innerHTML='';
+            reviewed.forEach(q=>{
+                const idx=draftQuestions.length;
+                draftQuestions.push({type:q.type,question:q.question,option_a:q.option_a||'',option_b:q.option_b||'',option_c:q.option_c||'',option_d:q.option_d||'',correct:q.correct,timer:String(q.timer)});
+                addQFromData(idx,draftQuestions[idx]);
+            });
+            bd.remove();
+            document.getElementById('qContainer').scrollIntoView({behavior:'smooth',block:'start'});
+        });
+    }
+    window.aiRemoveQ=function(id){reviewed=reviewed.filter(q=>q._id!==id);if(!reviewed.length){const b=document.getElementById('aiModalBackdrop');if(b)b.remove();}else render();};
+    render();
 }
 
 function addQ(){
@@ -386,6 +525,87 @@ function addQ(){
     });
 }
 window.delQ=idx=>{ const el=document.getElementById(`qb${idx}`); if(el)el.remove(); draftQuestions[idx]=null; };
+
+// Adds a question block pre-filled with data (used by AI review approval)
+function addQFromData(idx, q){
+    const c=document.getElementById('qContainer');
+    const div=document.createElement('div');
+    div.className='q-block'; div.id=`qb${idx}`;
+    const isTF=q.type==='true_false';
+    div.innerHTML=`
+    <div class="q-block-header">
+        <span class="q-num-label" style="display:flex;align-items:center;gap:6px;">Q${idx+1} <span style="background:rgba(108,92,231,.2);color:#a78bfa;border-radius:20px;padding:1px 8px;font-size:.68rem;font-weight:700;">AI</span></span>
+        <button class="del-btn" onclick="delQ(${idx})"><i class="fas fa-trash"></i></button>
+    </div>
+    <div class="field"><label>Question</label><input class="inp" data-f="question" data-i="${idx}" value="${esc(q.question)}"></div>
+    <div class="field"><label>Type</label>
+        <select class="inp q-type" data-f="type" data-i="${idx}">
+            <option value="mcq"${q.type==='mcq'?' selected':''}>Multiple Choice (MCQ)</option>
+            <option value="true_false"${isTF?' selected':''}>True / False</option>
+            <option value="math"${q.type==='math'?' selected':''}>Math / Formula</option>
+        </select>
+    </div>
+    <div class="q-mcq-section" style="${isTF?'display:none':''}">
+        <div class="opt-grid">
+            <div class="field" style="margin:0"><label>Option A</label><input class="inp" data-f="option_a" data-i="${idx}" value="${esc(q.option_a)}"></div>
+            <div class="field" style="margin:0"><label>Option B</label><input class="inp" data-f="option_b" data-i="${idx}" value="${esc(q.option_b)}"></div>
+            <div class="field" style="margin:0"><label>Option C</label><input class="inp" data-f="option_c" data-i="${idx}" value="${esc(q.option_c)}"></div>
+            <div class="field" style="margin:0"><label>Option D</label><input class="inp" data-f="option_d" data-i="${idx}" value="${esc(q.option_d)}"></div>
+        </div>
+        <div class="row2">
+            <div class="field" style="margin:0"><label>Correct Answer</label>
+                <select class="inp q-correct" data-f="correct" data-i="${idx}">
+                    <option value="A"${q.correct==='A'?' selected':''}>A is correct</option>
+                    <option value="B"${q.correct==='B'?' selected':''}>B is correct</option>
+                    <option value="C"${q.correct==='C'?' selected':''}>C is correct</option>
+                    <option value="D"${q.correct==='D'?' selected':''}>D is correct</option>
+                </select>
+            </div>
+            <div class="field" style="margin:0"><label>Timer</label>
+                <select class="inp" data-f="timer" data-i="${idx}">
+                    <option value="15"${q.timer==15?' selected':''}>15 seconds</option>
+                    <option value="30"${q.timer==30?' selected':''}>30 seconds</option>
+                    <option value="60"${q.timer==60?' selected':''}>60 seconds</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="q-tf-section" style="${isTF?'':'display:none'}">
+        <div class="row2" style="margin-bottom:10px;">
+            <input class="inp" value="True" readonly data-f="option_a" data-i="${idx}">
+            <input class="inp" value="False" readonly data-f="option_b" data-i="${idx}">
+        </div>
+        <div class="row2">
+            <div class="field" style="margin:0"><label>Correct</label>
+                <select class="inp q-tf-correct" data-f="correct" data-i="${idx}">
+                    <option value="A"${q.correct==='A'?' selected':''}>True is correct</option>
+                    <option value="B"${q.correct==='B'?' selected':''}>False is correct</option>
+                </select>
+            </div>
+            <div class="field" style="margin:0"><label>Timer</label>
+                <select class="inp" data-f="timer" data-i="${idx}">
+                    <option value="15"${q.timer==15?' selected':''}>15 seconds</option>
+                    <option value="30"${q.timer==30?' selected':''}>30 seconds</option>
+                    <option value="60"${q.timer==60?' selected':''}>60 seconds</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="q-math-hint" style="display:none;"></div>`;
+    c.appendChild(div);
+
+    div.querySelector('.q-type').addEventListener('change',e=>{
+        const t=e.target.value; draftQuestions[idx].type=t;
+        div.querySelector('.q-mcq-section').style.display=(t==='mcq'||t==='math')?'':'none';
+        div.querySelector('.q-tf-section').style.display=t==='true_false'?'':'none';
+        if(t==='true_false'){draftQuestions[idx].option_a='True';draftQuestions[idx].option_b='False';draftQuestions[idx].option_c='';draftQuestions[idx].option_d='';}
+    });
+
+    div.querySelectorAll('[data-f]').forEach(el=>{
+        const sync=()=>{draftQuestions[parseInt(el.dataset.i)][el.dataset.f]=el.value;};
+        el.addEventListener('input',sync); el.addEventListener('change',sync);
+    });
+}
 
 async function doLaunch(){
     const title=document.getElementById('titleInp').value.trim();

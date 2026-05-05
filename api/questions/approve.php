@@ -1,8 +1,8 @@
 <?php
-// POST /api/questions/save.php
-// Body: { session_id, questions: [...], is_draft?: 0|1 }
-// is_draft=1 → AI-generated questions saved for review (not live)
-// is_draft=0 → Normal save (default, replaces all existing questions)
+// POST /api/questions/approve.php
+// Body: { session_id, questions: [...] }
+// Replaces ALL existing questions for a session with the approved set
+// and marks them as live (is_draft = 0).
 
 require_once __DIR__ . '/../config.php';
 if (empty($_SESSION['teacher_id'])) sendError('Not authenticated.', 401);
@@ -11,7 +11,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendError('Method not allowed.', 405)
 $body      = json_decode(file_get_contents('php://input'), true);
 $sessionId = intval($body['session_id'] ?? 0);
 $questions = $body['questions'] ?? [];
-$isDraft   = isset($body['is_draft']) ? intval($body['is_draft']) : 0;
 
 if (!$sessionId) sendError('session_id is required.');
 if (!is_array($questions) || count($questions) === 0) sendError('At least one question is required.');
@@ -26,25 +25,17 @@ $own->store_result();
 if ($own->num_rows === 0) sendError('Session not found or access denied.', 404);
 $own->close();
 
-if ($isDraft) {
-    // AI draft save: only delete previous drafts, keep live questions untouched
-    $del = $db->prepare('DELETE FROM questions WHERE session_id=? AND is_draft=1');
-    $del->bind_param('i', $sessionId);
-    $del->execute();
-    $del->close();
-} else {
-    // Normal save: replace everything (existing behaviour)
-    $del = $db->prepare('DELETE FROM questions WHERE session_id=?');
-    $del->bind_param('i', $sessionId);
-    $del->execute();
-    $del->close();
-}
+// Delete all previous questions (draft and live) for this session
+$del = $db->prepare('DELETE FROM questions WHERE session_id=?');
+$del->bind_param('i', $sessionId);
+$del->execute();
+$del->close();
 
-// Insert questions
+// Insert approved questions as live (is_draft = 0)
 $ins = $db->prepare(
     'INSERT INTO questions
         (session_id, question, option_a, option_b, option_c, option_d, correct, type, timer, sort_order, is_draft)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)'
 );
 
 $saved = 0;
@@ -58,15 +49,14 @@ foreach ($questions as $i => $q) {
     $type    = in_array($q['type'] ?? '', ['mcq','true_false','short','math']) ? $q['type'] : 'mcq';
     $timer   = intval($q['timer'] ?? 30);
     $order   = (int)$i;
-    $draft   = $isDraft ? 1 : 0;
 
     if (!$text) continue;
 
-    $ins->bind_param('isssssssiii', $sessionId, $text, $a, $b, $c, $d, $correct, $type, $timer, $order, $draft);
+    $ins->bind_param('isssssssi i', $sessionId, $text, $a, $b, $c, $d, $correct, $type, $timer, $order);
     if ($ins->execute()) $saved++;
 }
 $ins->close();
 
-if ($saved === 0) sendError('No valid questions were saved. Make sure each question has text.');
+if ($saved === 0) sendError('No valid questions were approved.');
 
-sendSuccess(['saved' => $saved], "$saved question(s) saved.");
+sendSuccess(['saved' => $saved], "$saved question(s) approved and ready to launch.");

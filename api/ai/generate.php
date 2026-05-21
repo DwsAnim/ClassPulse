@@ -1,148 +1,256 @@
 <?php
 // POST /api/ai/generate.php
-// Accepts: multipart/form-data with file= (image or PDF) OR json { text: "..." }
-// Returns: { success: true, questions: [...] }
+// Uses xAI Grok API (OpenAI-compatible format)
+// Accepts: multipart/form-data with file= (image/PDF) OR JSON { text: "..." }
+// Returns: { success, questions: [...], message }
 
 require_once __DIR__ . '/../config.php';
 if (empty($_SESSION['teacher_id'])) sendError('Not authenticated.', 401);
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendError('Method not allowed.', 405);
 
-// ── Gemini API Key ────────────────────────────────────────────
-define('GEMINI_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' . GEMINI_API_KEY);
+// ── xAI Grok credentials ──────────────────────────────────────
+define('GROK_API_URL', 'https://api.x.ai/v1/chat/completions');
+define('GROK_MODEL',   'grok-3-mini');   // fast, free-tier model
 
-// ── Prompt ────────────────────────────────────────────────────
-$PROMPT = <<<'PROMPT'
-You are a quiz generator for a classroom app. Analyse the provided note/image and generate quiz questions.
+// ── System prompt ─────────────────────────────────────────────
+$SYSTEM_PROMPT = 'You are an expert academic quiz generator for university and secondary school lecturers. '
+    . 'You generate clear, accurate, educationally sound quiz questions from lecture notes or images. '
+    . 'You always return ONLY valid raw JSON — no markdown fences, no explanation, nothing else before or after the JSON.';
 
-Return ONLY a valid JSON array with NO markdown, no code fences, no extra text.
+// ── User prompt ───────────────────────────────────────────────
+$USER_TEMPLATE = <<<'PROMPT'
+Analyse the lecture notes below and generate {COUNT} quiz questions.
 
-Each question object must have exactly these fields:
+Return ONLY a raw JSON array (no markdown, no backticks, no explanation).
+Each item must have EXACTLY these fields:
+
 {
-  "question": "...",
-  "type": "mcq" | "true_false",
+  "question": "Question text here",
+  "type": "mcq",
   "option_a": "...",
   "option_b": "...",
   "option_c": "...",
   "option_d": "...",
-  "correct": "A" | "B" | "C" | "D",
-  "timer": 15 | 30 | 60
+  "correct": "A",
+  "timer": 30
 }
 
-Rules:
-- Generate 5 questions minimum, 10 maximum.
-- For true_false: option_a must be "True", option_b must be "False", option_c and option_d must be empty strings, correct must be "A" or "B".
-- For mcq: all four options must be filled, no empty strings.
-- Vary difficulty: mix easy, medium, and hard questions.
-- Cover different parts of the material, not just one topic.
-- Timer should reflect difficulty: easy=15, medium=30, hard=60.
-- Return ONLY the JSON array. No explanation, no markdown.
+TYPE RULES:
+- "mcq": all four options filled, correct = A/B/C/D
+- "true_false": option_a = "True", option_b = "False", option_c = "", option_d = "", correct = "A" (true) or "B" (false)
+
+QUALITY RULES:
+- Each question tests a specific concept from the notes
+- MCQ distractors must be plausible, not obviously wrong
+- No repeated questions on the same concept
+- Mix MCQ and True/False naturally
+- Timer: 15 for easy, 30 for medium, 60 for hard
+
+NOTES:
 PROMPT;
 
-// ── Build request parts ───────────────────────────────────────
-$parts = [];
+// ── Read inputs ───────────────────────────────────────────────
+$count     = max(3, min(20, intval($_POST['count'] ?? $_GET['count'] ?? 8)));
+$pasteText = trim($_POST['text'] ?? '');
+$file      = $_FILES['file'] ?? null;
+$hasFile   = $file && isset($file['tmp_name']) && $file['error'] === UPLOAD_ERR_OK;
 
-if (!empty($_FILES['file']['tmp_name'])) {
-    $file     = $_FILES['file'];
-    $mimeType = mime_content_type($file['tmp_name']);
-    $allowed  = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf'];
-
-    if (!in_array($mimeType, $allowed)) {
-        sendError('Unsupported file type. Please upload a JPG, PNG, WEBP, HEIC, or PDF.');
-    }
-    if ($file['size'] > 10 * 1024 * 1024) {
-        sendError('File too large. Maximum size is 10 MB.');
-    }
-
-    $base64  = base64_encode(file_get_contents($file['tmp_name']));
-    $parts[] = ['inline_data' => ['mime_type' => $mimeType, 'data' => $base64]];
-} else {
-    $body = json_decode(file_get_contents('php://input'), true);
-    $text = trim($body['text'] ?? '');
-    if (!$text) sendError('No file or text provided.');
-    $parts[] = ['text' => "Here are the lecture notes:\n\n" . $text];
+// Also support JSON body (for text-only requests)
+if (!$pasteText && !$hasFile) {
+    $jsonBody  = json_decode(file_get_contents('php://input'), true);
+    $pasteText = trim($jsonBody['text'] ?? '');
 }
 
-$parts[] = ['text' => $PROMPT];
+if (!$pasteText && !$hasFile) {
+    sendError('Please provide lecture notes text or upload a file (image or PDF).');
+}
 
-// ── Call Gemini ───────────────────────────────────────────────
+// ── Build the message content ─────────────────────────────────
+$userPrompt = str_replace('{COUNT}', $count, $USER_TEMPLATE);
+$messages   = [
+    ['role' => 'system', 'content' => $SYSTEM_PROMPT],
+];
+
+if ($hasFile) {
+    // ── File handling ─────────────────────────────────────────
+    $mimeType = mime_content_type($file['tmp_name']);
+    $allowed  = ['image/jpeg','image/png','image/webp','image/gif','image/heic','application/pdf'];
+
+    if (!in_array($mimeType, $allowed)) {
+        sendError('Unsupported file type. Please upload JPG, PNG, WEBP, HEIC, or PDF.');
+    }
+    if ($file['size'] > 10 * 1024 * 1024) {
+        sendError('File too large. Maximum 10 MB.');
+    }
+
+    if ($mimeType === 'application/pdf') {
+        // Try pdftotext first (available on many servers)
+        $tmpPath = tempnam(sys_get_temp_dir(), 'cp_') . '.pdf';
+        move_uploaded_file($file['tmp_name'], $tmpPath);
+        $extracted = '';
+        if (function_exists('shell_exec')) {
+            $extracted = shell_exec('pdftotext -nopgbrk ' . escapeshellarg($tmpPath) . ' - 2>/dev/null');
+        }
+        @unlink($tmpPath);
+
+        if ($extracted && strlen(trim($extracted)) > 30) {
+            // Got text from PDF — send as text
+            $messages[] = [
+                'role'    => 'user',
+                'content' => $userPrompt . "\n\n" . trim($extracted),
+            ];
+        } else {
+            // No pdftotext — send as base64 image content
+            // Grok vision supports PDF pages as images
+            $b64 = base64_encode(file_get_contents($tmpPath ?: $file['tmp_name']));
+            $messages[] = [
+                'role'    => 'user',
+                'content' => [
+                    ['type' => 'text',      'text'      => $userPrompt],
+                    ['type' => 'image_url', 'image_url' => ['url' => "data:{$mimeType};base64,{$b64}"]],
+                ],
+            ];
+        }
+    } else {
+        // Image — send as vision content (Grok supports multimodal)
+        $b64 = base64_encode(file_get_contents($file['tmp_name']));
+        $messages[] = [
+            'role'    => 'user',
+            'content' => [
+                ['type' => 'text',      'text'      => $userPrompt],
+                ['type' => 'image_url', 'image_url' => ['url' => "data:{$mimeType};base64,{$b64}"]],
+            ],
+        ];
+    }
+} else {
+    // Plain text notes
+    $messages[] = [
+        'role'    => 'user',
+        'content' => $userPrompt . "\n\n" . $pasteText,
+    ];
+}
+
+// ── Call Grok API ─────────────────────────────────────────────
 $payload = json_encode([
-    'contents'         => [['parts' => $parts]],
-    'generationConfig' => ['temperature' => 0.4, 'maxOutputTokens' => 4096],
+    'model'       => GROK_MODEL,
+    'messages'    => $messages,
+    'temperature' => 0.3,    // lower = more factual, consistent
+    'max_tokens'  => 4096,
+    'stream'      => false,
 ]);
 
-$ch = curl_init(GEMINI_API_URL);
+$ch = curl_init(GROK_API_URL);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST           => true,
     CURLOPT_POSTFIELDS     => $payload,
-    CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+    CURLOPT_HTTPHEADER     => [
+        'Content-Type: application/json',
+        'Authorization: Bearer ' . GROK_API_KEY,
+    ],
     CURLOPT_TIMEOUT        => 60,
+    CURLOPT_SSL_VERIFYPEER => true,
 ]);
+
 $raw      = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$curlErr  = curl_error($ch);
 curl_close($ch);
 
-if ($raw === false) sendError('Failed to reach Gemini API. Check your server internet connection.', 502);
+// ── Handle errors ─────────────────────────────────────────────
+if ($curlErr) {
+    sendError('Could not reach Grok API: ' . $curlErr, 503);
+}
 
-$geminiResp = json_decode($raw, true);
+$resp = json_decode($raw, true);
 
-if ($httpCode === 429) {
-    $msg  = $geminiResp['error']['message'] ?? '';
-    $wait = '';
-    if (preg_match('/retry in ([\d.]+)s/', $msg, $m)) {
-        $wait = ' Please wait ' . ceil((float)$m[1]) . ' seconds and try again.';
+if ($httpCode !== 200) {
+    $errMsg = $resp['error']['message'] ?? ('Grok API error (HTTP ' . $httpCode . ')');
+    // Rate limit
+    if ($httpCode === 429) {
+        sendError('Rate limit reached. Please wait a moment and try again.', 429);
     }
-    sendError('Rate limit reached.' . $wait, 429);
+    // Auth error
+    if ($httpCode === 401) {
+        sendError('Invalid Grok API key. Please check your configuration.', 401);
+    }
+    sendError('Grok error: ' . $errMsg, 502);
 }
 
-if (!isset($geminiResp['candidates'])) {
-    sendError('Gemini error: ' . ($geminiResp['error']['message'] ?? 'Unknown error.'), 502);
+// ── Extract generated text ────────────────────────────────────
+$generatedText = $resp['choices'][0]['message']['content'] ?? '';
+if (!$generatedText) {
+    sendError('Grok returned an empty response. Please try again.', 502);
 }
 
-// ── Parse response ────────────────────────────────────────────
-$text = $geminiResp['candidates'][0]['content']['parts'][0]['text'] ?? '';
-if (!$text) sendError('Gemini returned an empty response. Try a clearer image or more detailed notes.', 502);
+// Strip any accidental markdown fences
+$generatedText = preg_replace('/^```(?:json)?\s*/im', '', $generatedText);
+$generatedText = preg_replace('/```\s*$/m', '', $generatedText);
+$generatedText = trim($generatedText);
 
-// Strip accidental markdown fences
-$text = preg_replace('/```(?:json)?\s*/i', '', $text);
-$text = preg_replace('/```\s*$/',          '', trim($text));
-
-$questions = json_decode(trim($text), true);
-if (!is_array($questions) || count($questions) === 0) {
-    sendError('Could not parse questions from Gemini response. Please try again with a clearer image.', 502);
+// ── Parse JSON ────────────────────────────────────────────────
+// Handle both array [...] and object {"questions":[...]}
+$parsed = json_decode($generatedText, true);
+if (!$parsed) {
+    // Try extracting JSON array if there's extra text
+    if (preg_match('/\[[\s\S]*\]/m', $generatedText, $m)) {
+        $parsed = json_decode($m[0], true);
+    }
 }
 
-// ── Sanitize ──────────────────────────────────────────────────
+// Unwrap {"questions": [...]} if needed
+if (isset($parsed['questions']) && is_array($parsed['questions'])) {
+    $parsed = $parsed['questions'];
+}
+
+if (!is_array($parsed) || count($parsed) === 0) {
+    sendError('Could not parse questions from AI response. Please try again with clearer notes.', 502);
+}
+
+// ── Sanitise & validate each question ────────────────────────
 $clean = [];
-foreach ($questions as $q) {
+foreach ($parsed as $q) {
     if (empty($q['question'])) continue;
 
-    $type = in_array($q['type'] ?? '', ['mcq', 'true_false']) ? $q['type'] : 'mcq';
+    $type = in_array($q['type'] ?? '', ['mcq','true_false','math']) ? $q['type'] : 'mcq';
 
     if ($type === 'true_false') {
+        // Enforce True/False structure
         $q['option_a'] = 'True';
         $q['option_b'] = 'False';
         $q['option_c'] = '';
         $q['option_d'] = '';
-        if (!in_array($q['correct'] ?? '', ['A', 'B'])) $q['correct'] = 'A';
+        $corr = strtoupper($q['correct'] ?? 'A');
+        if (!in_array($corr, ['A','B'])) $corr = 'A';
+        $q['correct'] = $corr;
     } else {
-        if (empty($q['option_a']) || empty($q['option_b']) || empty($q['option_c']) || empty($q['option_d'])) continue;
-        if (!in_array($q['correct'] ?? '', ['A', 'B', 'C', 'D'])) $q['correct'] = 'A';
+        // MCQ — skip if options missing
+        if (empty($q['option_a']) || empty($q['option_b'])) continue;
+        $corr = strtoupper($q['correct'] ?? 'A');
+        if (!in_array($corr, ['A','B','C','D'])) $corr = 'A';
+        $q['correct'] = $corr;
     }
 
-    $timer   = in_array(intval($q['timer'] ?? 30), [15, 30, 60]) ? intval($q['timer']) : 30;
+    $timer = intval($q['timer'] ?? 30);
+    if (!in_array($timer, [15, 30, 60])) $timer = 30;
+
     $clean[] = [
-        'question' => htmlspecialchars_decode(trim($q['question'])),
+        'question' => trim(strip_tags($q['question'])),
         'type'     => $type,
         'option_a' => trim($q['option_a'] ?? ''),
         'option_b' => trim($q['option_b'] ?? ''),
         'option_c' => trim($q['option_c'] ?? ''),
         'option_d' => trim($q['option_d'] ?? ''),
-        'correct'  => strtoupper($q['correct']),
+        'correct'  => $q['correct'],
         'timer'    => $timer,
     ];
 }
 
-if (count($clean) === 0) sendError('No valid questions could be extracted. Try a higher quality image.');
+if (count($clean) === 0) {
+    sendError('No valid questions were extracted. Try again with more detailed notes.');
+}
 
-sendSuccess(['questions' => $clean], count($clean) . ' question(s) generated.');
+sendSuccess(
+    ['questions' => $clean],
+    count($clean) . ' question(s) generated successfully.'
+);
